@@ -101,14 +101,23 @@ export async function lobby(R, api, resume = null) {
     line(R, 3, [['L', 15], ['  Play on this computer   ', 7]]);
     line(R, 4, [['C', 15], ['  Create an online game   ', 7]]);
     line(R, 5, [['J', 15], ['  Join an online game     ', 7]]);
-    R.gotoXY(36, 5);
+    line(R, 6, [['S', 15], ['  Sound test              ', 7]]);
+    R.gotoXY(36, 6);
     let k;
-    do { k = await key(R); } while (k.ext !== undefined || !'LCJ'.includes(String.fromCharCode(k.ch).toUpperCase()));
+    do { k = await key(R); } while (k.ext !== undefined || !'LCJS'.includes(String.fromCharCode(k.ch).toUpperCase()));
     const c = String.fromCharCode(k.ch).toUpperCase();
     if (c === 'L') return { mode: 'local' };
+    if (c === 'S') { await soundTest(R); continue; }
     const r = c === 'C' ? await createGame(R, api) : await joinScreen(R, api);
     if (r) return r;
   }
+}
+
+// Every sound of the game, one key each (SNDTEST.PAS, compiled like the game).
+async function soundTest(R) {
+  const { main } = await import('./sndtest.js');
+  R.programStart();
+  try { await main(R); } finally { R.noSound(); }
 }
 
 async function askName(R, subtitle, row = 3) {

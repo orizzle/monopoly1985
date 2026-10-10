@@ -84,7 +84,7 @@ async function stepsound() {
         let c5 = s5 - e5 + 1;
         R.ww(0x026a, s5);
         for (;;) {
-          R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(R.rw(0x026a));
           }
@@ -108,7 +108,7 @@ async function cornersound() {
         let c6 = e6 - s6 + 1;
         R.ww(0x026a, s6);
         for (;;) {
-          R.cpu(600);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(600, 53);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(R.rw(0x026a));
           }
@@ -156,7 +156,7 @@ async function rattlesound() {
         let c7 = e7 - s7 + 1;
         R.ww(0x026a, s7);
         for (;;) {
-          R.cpu(1496);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(1496, 118);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(R.random(H.w((R.rw(0x026a)) * (2500))));
           }
@@ -203,7 +203,7 @@ async function flashtoken() {
         let c9 = e9 - s9 + 1;
         R.ww(0x026a, s9);
         for (;;) {
-          R.cpu(6156);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(6156, 497);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           R.putPic(((0x02c9 + 13646) + ((R.rw(0x0262)) - 1) * 16), R.rw(0x0270), R.rw(0x0272));
           if (R.rb(0x3b79)) {
             R.sound(2000);
@@ -268,7 +268,7 @@ async function gotojail() {
         let c11 = s11 - e11 + 1;
         R.ww(0x026a, s11);
         for (;;) {
-          R.cpu(22025);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(22025, 2259);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(R.rw(0x026a));
           }
@@ -316,7 +316,7 @@ async function threedoubles() {
               let c13 = s13 - e13 + 1;
               R.ww(0x026c, s13);
               for (;;) {
-                R.cpu(10860);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(10860, 1091);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(H.trunc(H.rdiv((R.rw(0x026c)), (2))));
                 }
@@ -332,7 +332,7 @@ async function threedoubles() {
               let c14 = e14 - s14 + 1;
               R.ww(0x026c, s14);
               for (;;) {
-                R.cpu(10860);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(10860, 1091);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(H.trunc(H.rdiv((R.rw(0x026c)), (2))));
                 }
@@ -354,7 +354,7 @@ async function threedoubles() {
         let c15 = e15 - s15 + 1;
         R.ww(0x026c, s15);
         for (;;) {
-          R.cpu(10866);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(10866, 1090);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(H.trunc(H.rdiv((R.rw(0x026c)), (2))));
           }
@@ -370,7 +370,7 @@ async function threedoubles() {
         let c16 = e16 - s16 + 1;
         R.ww(0x026c, s16);
         for (;;) {
-          R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(R.rw(0x026c));
           }
@@ -436,7 +436,7 @@ async function notenoughcash() {
         let c17 = e17 - s17 + 1;
         R.ww(0x026a, s17);
         for (;;) {
-          R.cpu(717);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(717, 65);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(150);
           }
@@ -490,7 +490,7 @@ async function notenoughcash() {
             let c19 = s19 - e19 + 1;
             R.ww(0x026c, s19);
             for (;;) {
-              R.cpu(564);   // 8088 clocks per iteration on the IBM PC
+              R.cpu(564, 50);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
               if (R.rb(0x3b79)) {
                 R.sound(R.rw(0x026c));
               }
@@ -665,7 +665,7 @@ async function countdowngfx() {
         let c25 = e25 - s25 + 1;
         R.ww(0x026a, s25);
         for (;;) {
-          R.cpu(6965);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(6965, 617);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           R.ww(((0x3897 + ((R.rw(0x3933)) - 1) * 34) + 13), H.w((R.rw(((0x3897 + ((R.rw(0x3933)) - 1) * 34) + 13))) - (5)));
           R.gotoXY(H.w((H.w((R.rw(0x3af1)) + (2))) + (H.w((H.w((R.rw(0x3933)) - (1))) * (10)))), 25);
           R.textColor(3);
@@ -695,7 +695,7 @@ async function countupgfx() {
         let c26 = e26 - s26 + 1;
         R.ww(0x026a, s26);
         for (;;) {
-          R.cpu(6961);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(6961, 618);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           R.ww(((0x3897 + ((R.rw(0x3935)) - 1) * 34) + 13), H.w((R.rw(((0x3897 + ((R.rw(0x3935)) - 1) * 34) + 13))) + (5)));
           R.gotoXY(H.w((H.w((R.rw(0x3af1)) + (2))) + (H.w((H.w((R.rw(0x3935)) - (1))) * (10)))), 25);
           R.textColor(3);
@@ -744,7 +744,7 @@ async function payamount() {
         let c27 = e27 - s27 + 1;
         R.ww(0x026a, s27);
         for (;;) {
-          R.cpu(6689);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(6689, 593);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           R.ww(((0x3897 + ((R.rw(0x3933)) - 1) * 34) + 13), H.w((R.rw(((0x3897 + ((R.rw(0x3933)) - 1) * 34) + 13))) - (R.rw(0x3b0b))));
           R.gotoXY(H.w((H.w((R.rw(0x3af3)) + (7))) + (H.w((H.w((R.rw(0x3933)) - (1))) * (20)))), 2);
           R.wrChar(36, 0);
@@ -785,7 +785,7 @@ async function receiveamount() {
         let c28 = e28 - s28 + 1;
         R.ww(0x026a, s28);
         for (;;) {
-          R.cpu(6689);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(6689, 593);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           R.ww(((0x3897 + ((R.rw(0x3935)) - 1) * 34) + 13), H.w((R.rw(((0x3897 + ((R.rw(0x3935)) - 1) * 34) + 13))) + (R.rw(0x3b0b))));
           R.gotoXY(H.w((H.w((R.rw(0x3af3)) + (7))) + (H.w((H.w((R.rw(0x3935)) - (1))) * (20)))), 2);
           R.wrChar(36, 0);
@@ -933,7 +933,7 @@ async function diceroll() {
               let c32 = e32 - s32 + 1;
               R.ww(0x026a, s32);
               for (;;) {
-                R.cpu(664);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(664, 60);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 R.sound(340);
                 await R.delay(150);
                 R.noSound();
@@ -1704,7 +1704,7 @@ async function mortgageinterest() {
         let c70 = e70 - s70 + 1;
         R.ww(0x026c, s70);
         for (;;) {
-          R.cpu(728);   // 8088 clocks per iteration on the IBM PC
+          R.cpu(728, 67);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
           if (R.rb(0x3b79)) {
             R.sound(780);
           }
@@ -2306,7 +2306,7 @@ async function returnhouses() {
               let c89 = s89 - e89 + 1;
               R.ww(0x026a, s89);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2326,7 +2326,7 @@ async function returnhouses() {
               let c90 = e90 - s90 + 1;
               R.ww(0x026a, s90);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2342,7 +2342,7 @@ async function returnhouses() {
               let c91 = s91 - e91 + 1;
               R.ww(0x026a, s91);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2358,7 +2358,7 @@ async function returnhouses() {
               let c92 = e92 - s92 + 1;
               R.ww(0x026a, s92);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2508,7 +2508,7 @@ async function buyhouses() {
               let c96 = e96 - s96 + 1;
               R.ww(0x026a, s96);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2524,7 +2524,7 @@ async function buyhouses() {
               let c97 = s97 - e97 + 1;
               R.ww(0x026a, s97);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2540,7 +2540,7 @@ async function buyhouses() {
               let c98 = e98 - s98 + 1;
               R.ww(0x026a, s98);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -2556,7 +2556,7 @@ async function buyhouses() {
               let c99 = s99 - e99 + 1;
               R.ww(0x026a, s99);
               for (;;) {
-                R.cpu(576);   // 8088 clocks per iteration on the IBM PC
+                R.cpu(576, 49);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
                 if (R.rb(0x3b79)) {
                   R.sound(R.rw(0x026a));
                 }
@@ -3201,7 +3201,7 @@ async function startgame() {
       if (!(e139 >= s139)) { pc = 7; continue; }
       c139 = e139 - s139 + 1; R.ww(0x026a, s139);
     case 8: // t139
-      R.cpu(664);   // 8088 clocks per iteration on the IBM PC
+      R.cpu(664, 60);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
       R.sound(340);
       await R.delay(150);
       R.noSound();
@@ -4476,7 +4476,7 @@ async function chance() {
       if (!(e252 >= s252)) { pc = 55; continue; }
       c252 = e252 - s252 + 1; R.ww(0x026a, s252);
     case 56: // t252
-      R.cpu(10827);   // 8088 clocks per iteration on the IBM PC
+      R.cpu(10827, 1086);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
       if (!(R.rb(0x3b79))) { pc = 57; continue; }
       R.sound(H.trunc(H.rdiv((R.rw(0x026a)), (2))));
     case 57: // e253
@@ -4489,7 +4489,7 @@ async function chance() {
       if (!(e254 <= s254)) { pc = 58; continue; }
       c254 = s254 - e254 + 1; R.ww(0x026a, s254);
     case 59: // t254
-      R.cpu(10827);   // 8088 clocks per iteration on the IBM PC
+      R.cpu(10827, 1086);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed
       if (!(R.rb(0x3b79))) { pc = 60; continue; }
       R.sound(H.trunc(H.rdiv((R.rw(0x026a)), (2))));
     case 60: // e255

@@ -535,10 +535,12 @@ class E:
 
 
 class Compiler:
-    def __init__(self, prog, name, pcmap=None, cpu=None):
+    def __init__(self, prog, name, pcmap=None, cpu=None, speed=None, like=None):
         self.pcmap = pcmap
         self.cpumap = cpu or {}       # procedure -> 8088 clocks per iteration of its sound loops
+        self.speedmap = speed or {}   # procedure -> the same at DOSBox's default speed (the speed switch)
         self.loopcost = {}
+        self.like = like              # procedure names of the program the cpu/speed tables belong to
         self.prog = prog; self.name = name
         self.types = {'integer': INT, 'byte': BYTE, 'char': CHAR, 'boolean': BOOL, 'real': REAL}
         self.globals = {}       # name -> Sym
@@ -877,8 +879,7 @@ class Compiler:
             self.emit('let c%d = %s;' % (n, ('e%d - s%d + 1' if not s.down else 's%d - e%d + 1') % (n, n)))
             self.emit('%s(%s, s%d);' % (wr, a, n))
             self.emit('for (;;) {'); self.ind += 1
-            cost = self.loopcost.get(id(s))
-            if cost: self.emit('R.cpu(%d);   // 8088 clocks per iteration on the IBM PC' % cost)
+            if id(s) in self.loopcost: self.emit(self.cpucall(s))
             self.stmt(s.body)
             self.emit('if (--c%d === 0) break;' % n)
             self.emit('%s(%s, %s(%s) %s 1);' % (wr, a, rd, a, '+' if not s.down else '-'))
@@ -1092,8 +1093,7 @@ class Compiler:
             L.append(('jf', 'e%d %s s%d' % (n, cmp, n), Lend))
             L.append(('code', 'c%d = %s; %s(%s, s%d);' % (n, ('e%d - s%d + 1' if not s.down else 's%d - e%d + 1') % (n, n), wr, a, n)))
             L.append(('label', Ltop))
-            cost = self.loopcost.get(id(s))
-            if cost: L.append(('code', 'R.cpu(%d);   // 8088 clocks per iteration on the IBM PC' % cost))
+            if id(s) in self.loopcost: L.append(('code', self.cpucall(s)))
             self.lower(s.body, L)
             L.append(('jf', '--c%d !== 0' % n, Lend))
             L.append(('code', '%s(%s, %s(%s) %s 1);' % (wr, a, rd, a, '+' if not s.down else '-')))
@@ -1160,8 +1160,18 @@ class Compiler:
     def set_loop_costs(self, name, body):
         loops = []; for_loops(body, loops)
         sl = [l for l in loops if has_sound(l.body)]
-        costs = self.cpumap.get(self.key(name), [])
-        self.loopcost = {id(l): c for l, c in zip(sl, costs) if c}
+        key = self.key(name)
+        if self.like is not None:      # tables of another program: the procedure of the same name
+            key = '#%d' % self.like.index(name) if name in self.like else None
+        costs = self.cpumap.get(key, [])
+        fast = self.speedmap.get(key, [])
+        fast = list(fast) + [0] * (len(costs) - len(fast))
+        self.loopcost = {id(l): (c, f) for l, c, f in zip(sl, costs, fast) if c}
+
+    def cpucall(self, loop):
+        c, f = self.loopcost[id(loop)]
+        if f: return 'R.cpu(%d, %d);   // clocks per iteration: IBM PC (8088, 4.77 MHz), DOSBox default speed' % (c, f)
+        return 'R.cpu(%d);   // 8088 clocks per iteration on the IBM PC' % c
 
     def compile_proc(self, d):
         p = self.procs[d.name]
@@ -1277,13 +1287,22 @@ def main():
     ap.add_argument('src'); ap.add_argument('dst')
     ap.add_argument('--pcmap'); ap.add_argument('--prog'); ap.add_argument('--csout')
     ap.add_argument('--cpu', help='soundloops.json from measure_sound_loops.py')
+    ap.add_argument('--speed', help='soundspeed.json from measure_sound_loops.py --dosbox: the same loops at '
+                    'DOSBox\'s default speed; the runtime chooses between the two (Runtime.speed)')
+    ap.add_argument('--like', help='the --cpu/--speed tables are those of this program (e.g. MONOCODE.PAS): '
+                    'each procedure takes the timings of its namesake there (sound test copies)')
     a = ap.parse_args()
     src, dst = a.src, a.dst
     pcmap = json.load(open(a.pcmap))[a.prog] if a.pcmap else None
     toks = lex(src, [])
     prog = Parser(toks).program()
     cpu = json.load(open(a.cpu)) if a.cpu else None
-    c = Compiler(prog, os.path.basename(src), pcmap, cpu)
+    speed = json.load(open(a.speed)) if a.speed else None
+    like = None
+    if a.like:
+        ref = Parser(lex(a.like, [])).program()
+        like = [d.name for d in ref.decls if d.k == 'proc']
+    c = Compiler(prog, os.path.basename(src), pcmap, cpu, speed, like)
     js = c.compile()
     open(dst, 'w').write(js)
     print('%s: %d procedures, data ends at DS:%04X, %d bytes of typed constants' % (

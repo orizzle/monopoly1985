@@ -11,6 +11,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pas2js
 from cycles8088 import CPU, Halt
 
+DOSBOX_OUT = None
+if '--dosbox' in sys.argv:      # also write the loops' timing at DOSBox's default speed
+    i = sys.argv.index('--dosbox'); DOSBOX_OUT = sys.argv[i + 1]; del sys.argv[i:i + 2]
+DOSBOX_IPMS = 3000      # DOSBox cycles=auto runs a real-mode program at 3000 instructions per ms
 SRC, ORIG, OUT = sys.argv[1], sys.argv[2], sys.argv[-1]
 COM = sys.argv[3] if ORIG == '--com' else None
 CHN_BASE = 0x2D7C
@@ -51,13 +55,27 @@ def main():
     while k + 7 <= len(ovl):
         sz, ad = struct.unpack('<HH', ovl[k + 3:k + 7]); ovrecs.append((ovl[k:k + 7 + sz], ad - 7))
         k += ((sz + 7 + 255) // 256) * 256
-    result = {}
-    ov_index = 0
+    # where each procedure is in the original: the comment before it gives its address
+    # ('{ P_4DA4 -- ...}') or its overlay ('{ overlay 2 -- ...}')
+    where = {}
+    if not COM:
+        srcdir = os.path.dirname(os.path.abspath(SRC))
+        text = ''.join(open(os.path.join(srcdir, f), encoding='latin-1').read()
+                       for f in sorted(os.listdir(srcdir)) if f.upper().endswith(('.PAS', '.INC')))
+        for m in re.finditer(r'\{ (P_([0-9A-Fa-f]{4})|overlay (\d+)) --[^}]*\}\s*(?:overlay\s+)?procedure\s+(\w+)', text, re.I):
+            where[m.group(4).lower()] = ('ov', int(m.group(3))) if m.group(3) else ('addr', int(m.group(2), 16))
+    def overlay_of(name):
+        w = where.get(name.lower())
+        if w and w[0] == 'ov': return w[1]
+        return int(name[2:]) if name.startswith('ov') and name[2:].isdigit() else None
+    def addr_of(name):
+        w = where.get(name.lower())
+        return procaddr.get(name) or (w[1] if w else int(name[2:], 16))
+    result = {}; dosbox = {}
     for d in prog.decls:
         if d.k != 'proc': continue
         name = d.name
-        if name.startswith('ov'):
-            ov_index = int(name[2:])
+        ovn = overlay_of(name)
         loops = []
         for_loops(d.body, loops)
         sound_loops = [(i, l) for i, l in enumerate(loops) if has_sound(l.body)]
@@ -70,8 +88,8 @@ def main():
             base = CS << 4
             cpu.mem[base + 0x100:base + 0x100 + 0x2C7C] = rt[:0x2C7C]
             cpu.mem[base + CHN_BASE:base + CHN_BASE + len(chn)] = chn
-            if name.startswith('ov'):
-                rec, lb = ovrecs[int(name[2:]) - 1]
+            if ovn:
+                rec, lb = ovrecs[ovn - 1]
                 cpu.mem[base + lb:base + lb + len(rec)] = rec
             dbase = DS << 4
             cpu.mem[dbase + 0x2C9:dbase + 0x2C9 + len(gra)] = gra       # graphics record G02C9
@@ -80,15 +98,15 @@ def main():
             cpu.r['sp'] = 0xFFF0; cpu.r['bp'] = 0xFFF0
             cpu.skip = {DELAY: 0}
             return cpu
-        if name.startswith('ov'):
-            rec, lb = ovrecs[int(name[2:]) - 1]
+        if ovn:
+            rec, lb = ovrecs[ovn - 1]
             code, cbase = rec, lb
         else:
-            addr = procaddr.get(name) or int(name[2:], 16)
+            addr = addr_of(name)
             code, cbase = chn[addr - CHN_BASE:], addr
         # loop heads: 'pop cx; xchg cx,ax; sub cx,ax' in code order (TP3 for-loop prologue)
         heads = [m.start() for m in re.finditer(rb'\x59\x91\x2b\xc8', code)]
-        per = []
+        per = []; fast = []
         for idx, lp in sound_loops:
             h = heads[idx]
             # TP3: [start expr] push ax; [end expr -> ax]; pop cx; xchg; sub; jge/jle +3; jmp EXIT; ...
@@ -108,19 +126,23 @@ def main():
             n_iter = abs(e - s) + 1
             t0 = cpu.clock
             try:
-                cpu.run(exit_)
+                steps = cpu.run(exit_)
             except Halt as ex:
                 # the loop does BIOS/DOS I/O (screen output, keyboard): its sounds are all paced by
                 # Delay, so no CPU time is modelled for it
                 print('%-8s loop %d: not measured (%s); sounds in it are paced by Delay' % (name, idx, ex))
-                per.append(0); continue
+                per.append(0); fast.append(0); continue
             cyc = (cpu.clock - t0) / n_iter
             outs = [p for p in cpu.port_log if p[1] == 0x42]
             per.append(round(cyc))
+            # the same time at DOSBox's speed, in 4.77 MHz clocks (what the runtime's cpu() takes)
+            fast.append(max(1, round(steps / n_iter / DOSBOX_IPMS * 4772.727)))
             print('%-8s loop %d (%d..%d, %d iterations): %.0f clocks/iteration = %.3f ms; speaker writes %d' % (
                 name, idx, s, e, n_iter, cyc, cyc / 4772.727, len(outs) // 2))
-        result['#%d' % [x.name for x in prog.decls if x.k == 'proc'].index(name)] = per
+        key = '#%d' % [x.name for x in prog.decls if x.k == 'proc'].index(name)
+        result[key] = per; dosbox[key] = fast
     json.dump(result, open(OUT, 'w'), indent=1)
+    if DOSBOX_OUT: json.dump(dosbox, open(DOSBOX_OUT, 'w'), indent=1)
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>token and jail sounds</title></head>
+<body style="background:#000;color:#aaa;font:14px monospace">
+<p id="s">token and jail sounds: plays the game's sound effects through the port's runtime (PC speaker emulation)</p>
+<script type="module">
+import { Runtime, Speaker, MemoryFS } from '../../runtime.js';
+import { main } from './tokjail.js';
+const speaker = new Speaker();
+speaker.resume();
+const R = new Runtime({ audio: speaker, vfs: new MemoryFS({}) });
+R.programStart();
+document.title = 'RUNNING';
+main(R).then(() => { document.title = 'DONE'; }, (e) => { document.getElementById('s').textContent = 'error: ' + e; document.title = 'ERROR'; });
+</script>
+</body></html>

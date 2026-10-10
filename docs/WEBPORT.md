@@ -88,23 +88,40 @@ So mortgage interest on a $150 property comes to $7, as on the original.
 
 ## Sound
 
-> **Status:** all sounds are good except the **go-to-jail siren** and the **token movement** (the sound of each square the token steps over), which do not yet sound right. An attempt to fix them by restarting the wave on every `Sound` call, as the PC's timer does, distorted the corner sweep and added tones to the dice rattle, so it was withdrawn.
+> **Speed switch:** the sounds that ran as fast as the PC could go follow either **DOSBox's default speed** (the default; it sounds like the faster PCs of the early 1990s, on which the game is remembered) or the **4.77 MHz IBM PC** the game was written for. The "Speed" control below the screen chooses; the choice is kept in the browser (`localStorage` `monopoly.speed`). All other sounds are timed by `Delay` and are the same at both speeds. An earlier attempt to restart the wave on every `Sound` call, as the PC's timer does, distorted the corner sweep and added tones to the dice rattle, so it was withdrawn.
 
 - **Pitch:** the PC speaker is a Web Audio square wave. `Sound(Hz)` uses the same timer divisor as the runtime (`1234DDh / Hz`, frequencies of 18 Hz and below ignored), so pitches are exact.
-- **`Delay`:** a real millisecond, as it was on the PC, where the runtime calibrated it at start-up. Browser timers are coarse, so the port keeps a virtual clock and schedules every speaker change on the audio clock at its exact virtual time.
+- **`Delay`:** a real millisecond, as it was on the PC, where the runtime calibrated it at start-up. Browser timers are coarse, so the port keeps a virtual clock and schedules every speaker change on the audio clock at its exact virtual time. A timer that wakes a few ms late does not add to a sound: the virtual clock may lag real time by up to 20 ms (the speaker schedules 30 ms ahead).
 
 ### CPU-timed effects
 
-Several effects are loops of `Sound` calls with no `Delay`: the house-building sweeps, the jail siren, the three-doubles siren and the cash counters. How long they last depended on the speed of the PC, and some compute real arithmetic in software on every step.
+Several effects are loops of `Sound` calls with no `Delay`: the token steps, the house sweeps, the jail and three-doubles sirens, the Chance "go back three spaces" sweep and the cash counters. How long they last depended on the speed of the PC, and some compute real arithmetic in software on every step.
 
-The port reproduces the IBM PC (8088 at 4.77 MHz) the game was written for:
+Both speeds are derived from the **original machine code** of each such loop, including the 1985 runtime's `Sound` and real-arithmetic routines:
 1. `web/tools/cycles8088.py` is an 8086 interpreter with an 8088 timing model. It uses the data-sheet clock counts, the 8-bit bus and the 4-byte prefetch queue.
-2. `web/tools/measure_sound_loops.py` runs the **original machine code** of each such loop through it, including the 1985 runtime's `Sound` and real-arithmetic routines, and records the clocks per iteration (`tools/soundloops.json`).
-3. The compiled loops charge that CPU time to the virtual clock.
+2. `web/tools/measure_sound_loops.py` runs each loop through it and records, per iteration, the 8088 clocks (`tools/soundloops.json`, the IBM PC) and, with `--dosbox`, the instruction count at DOSBox's default 3000 instructions per ms (`tools/soundspeed.json`, in the same 4.77 MHz clock units).
+3. `pas2js.py --cpu soundloops.json --speed soundspeed.json` writes both into each loop (`R.cpu(576, 49)`), and the runtime charges the one for its `speed` to the virtual clock.
 
-The model is a first-order 8088 estimate, typically within about 10% of real hardware.
+Checked against recordings of the game's own procedures in DOSBox 0.74 at its default speed (`web/test/sound/TOKJAIL.PAS` and `HOUSES.PAS`, compiled with Turbo Pascal 3 and relocated onto the 1985 runtime; `tokjail.html` plays the first through the port):
 
-### Sound test
+| Effect | DOSBox default speed | Port (DOSBox speed) | Port (IBM PC speed) |
+|---|---|---|---|
+| Token step | a click of about 1 ms | 1.0 ms | 12 ms chirp |
+| Jail siren glide between held notes | about 45 ms | 47 ms | 460 ms |
+| Building a house (sweeps + 50 ms) | 114 ms | 114 ms | 800 ms |
+| Selling a house (sweeps) | 31.5 ms | 30.8 ms | 350 ms |
+
+The instruction-count model is within 2–4% of the DOSBox measurements (houses and steps 49 vs 51 clocks per iteration, jail 2259 vs 2220). The 8088 model is a first-order estimate, typically within about 10% of real hardware. DOSBox runs `Delay` about 6% short at its default speed; the port keeps `Delay` exact.
+
+Firefox builds its oscillator's wave tables the first time each pitch range plays, and on a slow machine that dropped out the siren's fast low glides for a few tens of milliseconds. The speaker therefore sweeps the whole pitch range once, silently, when audio starts.
+
+### Sound test screen
+
+**S** on the first menu opens a list of every sound in the game, played with a letter key each (dice rolling until a key is pressed, token movement, corners, passing GO, money, jail, three doubles, houses, beeps and alerts); Esc goes back. It is a Pascal program, `web/SNDTEST.PAS`, drawn in the game's style (its title box, colours and bottom hint line). Its sound procedures are copies of the game's, under the same names, without the pictures. `pas2js.py --like ../src/MONOCODE.PAS` gives each of their loops the timing of the same loop in the game (from `soundloops.json` and `soundspeed.json`), so every sound plays as in the game:
+
+    python3 tools/pas2js.py SNDTEST.PAS sndtest.js --cpu tools/soundloops.json --speed tools/soundspeed.json --like ../src/MONOCODE.PAS
+
+### Sound recordings
 
 The game's effects, copied into `web/test/sound/SNDPROBE.PAS`, were recorded on a Linux machine through PulseAudio from two sources:
 - the original 1985 runtime in DOSBox (fixed cycles, so that `Delay` calibration is correct);

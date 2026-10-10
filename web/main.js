@@ -12,6 +12,7 @@ const status = document.getElementById('status');
 const fontInput = document.getElementById('fontfile');
 const fontReset = document.getElementById('fontreset');
 const displaySel = document.getElementById('display');
+const speedSel = document.getElementById('speed');
 let R = null, started = false;
 let sink = null;                 // where typed keys go: the menus, the game, or the online game
 let online = null;
@@ -98,6 +99,15 @@ displaySel.addEventListener('change', () => {
   if (R) R.setDisplay(displaySel.value);
   fontLabel(); canvas.focus();
 });
+// Speed of the sound effects that ran as fast as the PC could go (sweeps, sirens, token steps):
+// DOSBox's default speed, like the faster PCs of the early 1990s, or the original IBM PC.
+function speed() { try { return localStorage.getItem('monopoly.speed') === 'pc' ? 'pc' : 'dosbox'; } catch (e) { return 'dosbox'; } }
+speedSel.value = speed();
+speedSel.addEventListener('change', () => {
+  try { localStorage.setItem('monopoly.speed', speedSel.value); } catch (e) { /* not persisted */ }
+  if (R) R.setSpeed(speedSel.value);
+  canvas.focus();
+});
 fontLabel();
 fontInput.addEventListener('change', async () => {
   const f = fontInput.files[0]; if (!f) return;
@@ -130,7 +140,7 @@ let resume = null;
 try { resume = JSON.parse(sessionStorage.getItem('monopoly.resume') || 'null'); sessionStorage.removeItem('monopoly.resume'); } catch (e) { /* none */ }
 if (resume) overlay.firstElementChild.textContent = 'Click or press a key to rejoin online game ' + resume.code;
 
-const newRuntime = (vfs) => new Runtime({ canvas, audio: speaker, vfs, font: font8(), font16: font16(), display: display() });
+const newRuntime = (vfs) => new Runtime({ canvas, audio: speaker, vfs, font: font8(), font16: font16(), display: display(), speed: speed() });
 const loadModule = (name) => import('./' + name + '.js');
 
 async function start() {

@@ -30,6 +30,7 @@ export const CGA_RGB = [
 const DS = 0x00000, CS = 0x10000, SS = 0x20000;
 const PIT_HZ = 1193181;           // speaker frequency = PIT_HZ / divisor
 const SOUND_CONST = 0x1234DD;     // runtime divides this by the requested frequency
+const LAG_MS = 20;                // the virtual clock may lag real time by this much (late timers)
 const CPU_KHZ = 14318.18 / 3;     // 8088 clock of the IBM PC: 4.77 MHz = 4772.7 clocks per ms
 // 8x16 font from an 8x8 one (each row doubled): the fallback VGA text font when no 8x16 font is given
 function font16From8(f8) {
@@ -84,6 +85,9 @@ export class Runtime {
     this.font = opts.font || BUILTIN_FONT;
     // VGA display (default in the browser): text modes use an 8x16 font in 9x16 cells (720x400)
     this.display = opts.display === 'cga' ? 'cga' : 'vga';
+    // speed of the CPU-timed sound loops: 'dosbox' (DOSBox's default speed, like a fast PC) or 'pc'
+    // (the 4.77 MHz IBM PC the game was written for)
+    this.speed = opts.speed === 'pc' ? 'pc' : 'dosbox';
     this._font16Derived = !(opts.font16 && opts.font16.length === 4096);
     this.font16 = this._font16Derived ? font16From8(this.font) : opts.font16;
     this.canvas = opts.canvas || null;
@@ -576,15 +580,19 @@ export class Runtime {
   noSound() { this._speaker(false); }
   _speaker(on, div) {
     this.speakerOn = on; if (on) this.divisor = div;
-    if (this.audio && !this.ff) this.audio.set(on, on ? PIT_HZ / (div || 65536) : 0, Math.max(this.vnow, this._now()));
+    const now = this._now();
+    if (this.audio && !this.ff) this.audio.set(on, on ? PIT_HZ / (div || 65536) : 0, this.vnow < now - LAG_MS ? now : this.vnow);
   }
   // CPU time of the original program on a 4.77 MHz IBM PC (8088), measured for the loops whose
   // sound depends on CPU speed (see tools/measure_sound_loops.py): advances the virtual clock
   // without blocking; speaker changes are scheduled on that clock
-  cpu(clocks) {
+  cpu(clocks, fast) {
+    if (fast !== undefined && this.speed !== 'pc') clocks = fast;
     if (this.headless || this.ff) { this.vnow += clocks / CPU_KHZ; return; }
     const now = this._now();
-    if (this.vnow < now) this.vnow = now;
+    // a timer that woke a few ms late (catchUp) does not add to the sound's length; the speaker
+    // schedules 30 ms ahead, so the virtual clock may lag real time by less than that
+    if (this.vnow < now - LAG_MS) this.vnow = now;
     this.vnow += clocks / CPU_KHZ;
   }
   // let real time catch up with the virtual clock (end of a CPU-timed loop)
@@ -886,6 +894,7 @@ export class Runtime {
     else { this.font16 = font16From8(this.font); this._font16Derived = true; }
   }
   setDisplay(d) { this.display = d === 'cga' ? 'cga' : 'vga'; }
+  setSpeed(s) { this.speed = s === 'pc' ? 'pc' : 'dosbox'; }
   detach() { this.detached = true; }       // stop drawing to the canvas (another runtime takes it over)
 }
 
@@ -929,6 +938,13 @@ export class Speaker {
       this.gain = this.ctx.createGain(); this.gain.gain.value = 0;
       this.osc.connect(this.gain).connect(this.ctx.destination);
       this.osc.start();
+      // Firefox builds the oscillator's wave tables the first time each pitch range plays, and on a
+      // slow machine that can drop out the sound (heard in the jail siren's fast low glides): sweep
+      // the whole range once, silently, before the first sound
+      const t0 = this.ctx.currentTime;
+      this.osc.frequency.setValueAtTime(18, t0);
+      this.osc.frequency.exponentialRampToValueAtTime(20000, t0 + 0.2);
+      this.lastT = t0 + 0.2;
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     this.set(this.on, this.freq);

@@ -44,6 +44,21 @@ Integers wrap at 16 bits, strings are length-prefixed and booleans are bytes. Ou
 - `GRAPH.BIN`'s `GraphColorMode`, `Palette`, `GetPic` and `PutPic`.
 - The canvas is drawn from video memory every frame.
 
+### Display: VGA or CGA
+
+Video memory and all game behaviour are the same in both; only the way text modes are drawn differs.
+
+**VGA (the default):**
+- Text modes are drawn at 720×400: 8×16 glyphs in 9-pixel cells. For characters C0h–DFh the 9th column repeats the 8th, so line-drawing characters join.
+- The cursor covers scan lines 13–14, and blinking follows 70 Hz frames.
+- Graphics mode 4 is 320×200, line-doubled, with the 8×8 font.
+
+**CGA:** text modes are 640×200 with the 8×8 font, line-doubled.
+
+**In both modes:**
+- The screen is shown at a monitor's 4:3 aspect.
+- The fonts come from `pcfont.bin`/`pcfont16.bin` when present (made by `tools/extract_pcfont.sh` from your own DOSBox BIOS), or from a font file loaded in the page. Otherwise the port's own font is used; its 8×16 version is the 8×8 one with each row doubled.
+
 ### Keyboard
 
 - The 15-key BIOS buffer.
@@ -124,6 +139,6 @@ The CPU-timed effects follow the 8088 model. DOSBox's fixed-cycle mode is a roug
 
 ## Differences that remain
 
-- **Font:** IBM's ROM font is not included (see the README for `extract_pcfont.sh`).
+- **Fonts:** IBM's ROM fonts (8×8 and VGA 8×16) are not included (see the README for `extract_pcfont.sh`).
 - **Drawing speed:** on a 4.77 MHz PC the screen drew visibly slowly. The port draws instantly, as DOSBox does at full speed. Only the CPU-dependent *sound* loops are timed.
 - **Touch input:** none. Playing needs a keyboard.

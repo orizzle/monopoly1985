@@ -24,7 +24,11 @@ The repository holds three things built from the game:
 
 Click the screen to start; sound needs a user action in the browser. During the dice roll, F1 toggles sound and F2 saves the game; on the "Who are the players?" screen, F2 loads a saved game. Saved games are kept in the browser's localStorage.
 
-**Font.** The original text font is IBM's PC character ROM, which is not included here. The port has its own 8×8 font. To get the original look, run `web/tools/extract_pcfont.sh` once. It takes the 8×8 font from the BIOS of your own DOSBox and writes `web/pcfont.bin`, which the port then uses automatically. You can also load any 2048-byte 8×8 font file with the control below the screen.
+**Display and font.** The port can show the screen as a VGA (the default) or a CGA would.
+- **VGA:** text screens use an 8×16 font in 9×16 character cells at 720×400; the board stays in 320×200 CGA graphics, as on a VGA PC.
+- **CGA:** everything uses the 8×8 font, as on the game's original 1985 target.
+
+The real IBM fonts are not included; the port has its own. To get the original look, run `web/tools/extract_pcfont.sh` once. It takes the 8×8 and VGA 8×16 fonts from the BIOS of your own DOSBox and writes `web/pcfont.bin` and `web/pcfont16.bin`, which the port then uses automatically. You can also load any 2048-byte (8×8) or 4096-byte (8×16) font file with the control below the screen.
 
 ## Build the original programs from the source
 

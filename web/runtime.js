@@ -31,6 +31,12 @@ const DS = 0x00000, CS = 0x10000, SS = 0x20000;
 const PIT_HZ = 1193181;           // speaker frequency = PIT_HZ / divisor
 const SOUND_CONST = 0x1234DD;     // runtime divides this by the requested frequency
 const CPU_KHZ = 14318.18 / 3;     // 8088 clock of the IBM PC: 4.77 MHz = 4772.7 clocks per ms
+// 8x16 font from an 8x8 one (each row doubled): the fallback VGA text font when no 8x16 font is given
+function font16From8(f8) {
+  const f = new Uint8Array(4096);
+  for (let c = 0; c < 256; c++) for (let y = 0; y < 16; y++) f[c * 16 + y] = f8[c * 8 + (y >> 1)];
+  return f;
+}
 const ATTR_COLOR = [0x0E, 0x07, 0x07, 0x4F];   // installed attribute table, colour modes
 const ATTR_BW = [0x0F, 0x07, 0x07, 0x70];      // b/w and monochrome modes
 const INSTALL_MODE = 3;                         // monopoly.com is installed for "Color display 80x25"
@@ -72,6 +78,10 @@ export class Runtime {
     this.audio = opts.audio || null;
     // --- font / rendering ---
     this.font = opts.font || BUILTIN_FONT;
+    // VGA display (default in the browser): text modes use an 8x16 font in 9x16 cells (720x400)
+    this.display = opts.display === 'cga' ? 'cga' : 'vga';
+    this._font16Derived = !(opts.font16 && opts.font16.length === 4096);
+    this.font16 = this._font16Derived ? font16From8(this.font) : opts.font16;
     this.canvas = opts.canvas || null;
     if (this.canvas) this._initCanvas();
     this.onHalt = null;
@@ -743,6 +753,8 @@ export class Runtime {
   // ======================================================================= rendering
   _initCanvas() {
     this.canvas.width = 640; this.canvas.height = 400;
+    this.vgaImg = new ImageData(720, 400);
+    this.vgaImg32 = new Uint32Array(this.vgaImg.data.buffer);
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
     this.off = document.createElement('canvas');
@@ -797,12 +809,58 @@ export class Runtime {
     }
     return out;
   }
+  // VGA text mode: 9x16 character cells, 720x400. Columns 9 of characters C0h..DFh repeat column 8
+  // (line drawing); the cursor covers scan lines 13-14; 70 Hz frames for the blink timing.
+  renderVGAText(out, t = this._now()) {
+    const b = this.bios, v = this.vram, f = this.font16;
+    const frameNo = Math.floor(t / (1000 / 70.086));
+    const cursorOn = (frameNo & 8) === 0, blinkOn = (frameNo & 16) === 0;
+    const cols = b.cols, dbl = cols === 40 ? 2 : 1;
+    for (let row = 0; row < 25; row++) {
+      for (let col = 0; col < cols; col++) {
+        const p = (row * cols + col) * 2;
+        const ch = v[p], at = v[p + 1];
+        const fgc = this.rgba[at & 15], bgc = this.rgba[(at >> 4) & 7];
+        const fg = (at & 0x80) && !blinkOn ? bgc : fgc;
+        const isCur = cursorOn && row === b.row && col === b.col;
+        const line = ch >= 0xC0 && ch <= 0xDF;
+        for (let y = 0; y < 16; y++) {
+          let bits = f[ch * 16 + y] << 1;
+          if (line) bits |= bits >> 1 & 1;
+          let color = fg;
+          if (isCur && (y === 13 || y === 14)) { bits = 0x1FF; color = fgc; }
+          const base = (row * 16 + y) * 720 + col * 9 * dbl;
+          for (let x = 0; x < 9; x++) {
+            const c = (bits >> (8 - x)) & 1 ? color : bgc;
+            if (dbl === 1) out[base + x] = c; else { out[base + 2 * x] = c; out[base + 2 * x + 1] = c; }
+          }
+        }
+      }
+    }
+    return out;
+  }
   render() {
+    if (this.display === 'vga' && !this._isGfx()) {
+      if (this.canvas.width !== 720) this.canvas.width = 720;
+      this.renderVGAText(this.vgaImg32);
+      this.ctx.putImageData(this.vgaImg, 0, 0);
+      return;
+    }
+    if (this.canvas.width !== 640) { this.canvas.width = 640; this.ctx.imageSmoothingEnabled = false; }
     this.renderTo(this.img32);
     this.offCtx.putImageData(this.img, 0, 0);
     this.ctx.drawImage(this.off, 0, 0, 640, 200, 0, 0, 640, 400);
   }
-  setFont(bytes) { this.font = bytes && bytes.length === 2048 ? bytes : BUILTIN_FONT; }
+  setFont(bytes) {
+    const derived = this.font16 === undefined || this._font16Derived;
+    this.font = bytes && bytes.length === 2048 ? bytes : BUILTIN_FONT;
+    if (derived) { this.font16 = font16From8(this.font); this._font16Derived = true; }
+  }
+  setFont16(bytes) {
+    if (bytes && bytes.length === 4096) { this.font16 = bytes; this._font16Derived = false; }
+    else { this.font16 = font16From8(this.font); this._font16Derived = true; }
+  }
+  setDisplay(d) { this.display = d === 'cga' ? 'cga' : 'vga'; }
 }
 
 // ========================================================================= file systems

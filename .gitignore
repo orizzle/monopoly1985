@@ -4,3 +4,4 @@ verify/an/
 verify/.rtruns.pkl
 __pycache__/
 web/pcfont.bin
+web/pcfont16.bin

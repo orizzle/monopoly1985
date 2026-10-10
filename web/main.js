@@ -8,51 +8,72 @@ const overlay = document.getElementById('overlay');
 const status = document.getElementById('status');
 const fontInput = document.getElementById('fontfile');
 const fontReset = document.getElementById('fontreset');
+const displaySel = document.getElementById('display');
 let R = null, started = false;
 const speaker = new Speaker();
 
+// The screen is shown at a monitor's 4:3 aspect (VGA text is 720x400, graphics 640x400 pixels);
+// the height is a multiple of 400 lines when it fits, so scan lines stay even.
 function fit() {
   const ui = document.getElementById('bar').offsetHeight + 16;
-  const fitScale = Math.min((window.innerWidth - 32) / 640, (window.innerHeight - ui) / 400);
-  const s = fitScale >= 1 ? Math.floor(fitScale) : Math.max(0.25, fitScale);   // integer scaling when it fits
-  canvas.style.width = 640 * s + 'px'; canvas.style.height = 400 * s + 'px';
+  const maxH = Math.min((window.innerWidth - 32) * 3 / 4, window.innerHeight - ui);
+  const h = maxH >= 400 ? Math.floor(maxH / 400) * 400 : Math.max(100, maxH);
+  canvas.style.height = h + 'px'; canvas.style.width = Math.round(h * 4 / 3) + 'px';
 }
 window.addEventListener('resize', fit); fit();
 
 function b64ToBytes(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
 function bytesToB64(u) { let s = ''; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
-function savedFont() {
-  try { const s = localStorage.getItem('monopoly.font'); if (s) { const f = b64ToBytes(s); if (f.length === 2048) return f; } } catch (e) { /* none */ }
+function saved(key, size) {
+  try { const s = localStorage.getItem(key); if (s) { const f = b64ToBytes(s); if (f.length === size) return f; } } catch (e) { /* none */ }
   return null;
 }
-// pcfont.bin (written by tools/extract_pcfont.sh from your own DOSBox/PC BIOS) is the default font
-// when present; a font loaded with the control below takes precedence; otherwise the built-in font.
-let pcFont = null;
-const pcFontReady = fetch('pcfont.bin').then((r) => (r.ok ? r.arrayBuffer() : null))
-  .then((b) => { const u = b && new Uint8Array(b); if (u && u.length === 2048) pcFont = u; })
-  .catch(() => {}).then(() => fontLabel());
-function defaultFont() { return pcFont || BUILTIN_FONT; }
+// Fonts: pcfont.bin (8x8) and pcfont16.bin (VGA 8x16), written by tools/extract_pcfont.sh from your
+// own DOSBox/PC BIOS, are used when present; fonts loaded with the control below take precedence;
+// otherwise the built-in font (an original design; 8x16 = its rows doubled).
+let pcFont = null, pcFont16 = null;
+const get = (name, size) => fetch(name).then((r) => (r.ok ? r.arrayBuffer() : null))
+  .then((b) => { const u = b && new Uint8Array(b); return u && u.length === size ? u : null; }).catch(() => null);
+const fontsReady = Promise.all([get('pcfont.bin', 2048), get('pcfont16.bin', 4096)])
+  .then(([a, b]) => { pcFont = a; pcFont16 = b; fontLabel(); });
+const font8 = () => saved('monopoly.font', 2048) || pcFont || BUILTIN_FONT;
+const font16 = () => saved('monopoly.font16', 4096) || pcFont16;
 function fontLabel() {
-  status.textContent = savedFont() ? 'Font: user-supplied 8x8 font' : pcFont ? 'Font: PC BIOS font (pcfont.bin)' : 'Font: built-in';
+  const d = display();
+  const name = d === 'vga'
+    ? (saved('monopoly.font16', 4096) ? 'user-supplied 8x16 font' : pcFont16 ? 'PC BIOS 8x16 font (pcfont16.bin)' : 'built-in')
+    : (saved('monopoly.font', 2048) ? 'user-supplied 8x8 font' : pcFont ? 'PC BIOS 8x8 font (pcfont.bin)' : 'built-in');
+  status.textContent = 'Font: ' + name;
 }
+function display() { try { return localStorage.getItem('monopoly.display') === 'cga' ? 'cga' : 'vga'; } catch (e) { return 'vga'; } }
+displaySel.value = display();
+displaySel.addEventListener('change', () => {
+  try { localStorage.setItem('monopoly.display', displaySel.value); } catch (e) { /* not persisted */ }
+  if (R) R.setDisplay(displaySel.value);
+  fontLabel(); canvas.focus();
+});
 fontLabel();
 fontInput.addEventListener('change', async () => {
   const f = fontInput.files[0]; if (!f) return;
   const u = new Uint8Array(await f.arrayBuffer());
-  if (u.length !== 2048) { status.textContent = 'Font file must be exactly 2048 bytes (256 glyphs x 8 rows)'; return; }
-  try { localStorage.setItem('monopoly.font', bytesToB64(u)); } catch (e) { /* not persisted */ }
-  if (R) R.setFont(u);
+  if (u.length === 2048) {
+    try { localStorage.setItem('monopoly.font', bytesToB64(u)); } catch (e) { /* not persisted */ }
+    if (R) R.setFont(u);
+  } else if (u.length === 4096) {
+    try { localStorage.setItem('monopoly.font16', bytesToB64(u)); } catch (e) { /* not persisted */ }
+    if (R) R.setFont16(u);
+  } else { status.textContent = 'Font file must be 2048 bytes (8x8) or 4096 bytes (8x16)'; return; }
   fontLabel(); fontInput.value = ''; canvas.focus();
 });
 fontReset.addEventListener('click', () => {
-  try { localStorage.removeItem('monopoly.font'); } catch (e) { /* ignore */ }
-  if (R) R.setFont(defaultFont());
+  try { localStorage.removeItem('monopoly.font'); localStorage.removeItem('monopoly.font16'); } catch (e) { /* ignore */ }
+  if (R) { R.setFont(font8()); R.setFont16(font16()); }
   fontLabel(); canvas.focus();
 });
 
 window.addEventListener('keydown', (e) => {
   if (!started) { if (e.key !== 'Tab') { e.preventDefault(); start(); } return; }
-  if (document.activeElement === fontInput) return;
+  if (document.activeElement === fontInput || document.activeElement === displaySel) return;
   const k = biosKey(e);
   if (k) { e.preventDefault(); R.pushKey(k[0], k[1]); }
 });
@@ -66,8 +87,8 @@ async function start() {
   const gra = new Uint8Array(await (await fetch('MONOGRAF.GRA')).arrayBuffer());
   const marker = new Uint8Array([0x1A]);
   const vfs = new BrowserFS({ 'MONOGRAF.GRA': gra, 'MONOCODE.CHN': marker, 'MONOCODE.000': marker });
-  await pcFontReady;
-  R = new Runtime({ canvas, audio: speaker, vfs, font: savedFont() || defaultFont() });
+  await fontsReady;
+  R = new Runtime({ canvas, audio: speaker, vfs, font: font8(), font16: font16(), display: display() });
   canvas.focus();
   const res = await runPrograms(R, (name) => import('./' + name + '.js'));
   status.textContent = res.kind === 'error' ? 'Program aborted.' : 'Program ended. Reload the page to play again.';

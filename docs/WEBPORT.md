@@ -57,7 +57,7 @@ Video memory and all game behaviour are the same in both; only the way text mode
 
 **In both modes:**
 - The screen is shown at a monitor's 4:3 aspect.
-- The fonts come from `pcfont.bin`/`pcfont16.bin` when present (made by `tools/extract_pcfont.sh` from your own DOSBox BIOS), or from a font file loaded in the page. Otherwise the port's own font is used; its 8×16 version is the 8×8 one with each row doubled.
+- The fonts come from `pcfont.bin`/`pcfont16.bin` when present (made by `tools/extract_pcfont.sh` from your own DOSBox BIOS), or from a font file loaded in the page; when both `.bin` files are present they are always used and the font controls are hidden. Otherwise the port's own font is used; its 8×16 version is the 8×8 one with each row doubled.
 
 ### Keyboard
 

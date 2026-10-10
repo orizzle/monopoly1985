@@ -28,7 +28,7 @@ Click the screen to start; sound needs a user action in the browser. During the 
 - **VGA:** text screens use an 8×16 font in 9×16 character cells at 720×400; the board stays in 320×200 CGA graphics, as on a VGA PC.
 - **CGA:** everything uses the 8×8 font, as on the game's original 1985 target.
 
-The real IBM fonts are not included; the port has its own. To get the original look, run `web/tools/extract_pcfont.sh` once. It takes the 8×8 and VGA 8×16 fonts from the BIOS of your own DOSBox and writes `web/pcfont.bin` and `web/pcfont16.bin`, which the port then uses automatically. You can also load any 2048-byte (8×8) or 4096-byte (8×16) font file with the control below the screen.
+The real IBM fonts are not included; the port has its own. To get the original look, run `web/tools/extract_pcfont.sh` once. It takes the 8×8 and VGA 8×16 fonts from the BIOS of your own DOSBox and writes `web/pcfont.bin` and `web/pcfont16.bin`, which the port then uses automatically. Without both files, you can also load any 2048-byte (8×8) or 4096-byte (8×16) font file with the control below the screen; when both are present, they are always used and that control is hidden.
 
 ## Build the original programs from the source
 

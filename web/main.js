@@ -29,19 +29,25 @@ function saved(key, size) {
   return null;
 }
 // Fonts: pcfont.bin (8x8) and pcfont16.bin (VGA 8x16), written by tools/extract_pcfont.sh from your
-// own DOSBox/PC BIOS, are used when present; fonts loaded with the control below take precedence;
-// otherwise the built-in font (an original design; 8x16 = its rows doubled).
-let pcFont = null, pcFont16 = null;
+// own DOSBox/PC BIOS, are used when present. When both are present they are always used and the
+// font controls are hidden; otherwise fonts loaded with the control below take precedence, then the
+// built-in font (an original design; 8x16 = its rows doubled).
+let pcFont = null, pcFont16 = null, pcFontsOnly = false;
 const get = (name, size) => fetch(name).then((r) => (r.ok ? r.arrayBuffer() : null))
   .then((b) => { const u = b && new Uint8Array(b); return u && u.length === size ? u : null; }).catch(() => null);
 const fontsReady = Promise.all([get('pcfont.bin', 2048), get('pcfont16.bin', 4096)])
-  .then(([a, b]) => { pcFont = a; pcFont16 = b; fontLabel(); });
-const font8 = () => saved('monopoly.font', 2048) || pcFont || BUILTIN_FONT;
-const font16 = () => saved('monopoly.font16', 4096) || pcFont16;
+  .then(([a, b]) => {
+    pcFont = a; pcFont16 = b; pcFontsOnly = !!(a && b);
+    if (pcFontsOnly) for (const el of [fontInput.parentElement, fontReset]) el.hidden = true;
+    fontLabel();
+  });
+const userFont = (key, size) => (pcFontsOnly ? null : saved(key, size));
+const font8 = () => userFont('monopoly.font', 2048) || pcFont || BUILTIN_FONT;
+const font16 = () => userFont('monopoly.font16', 4096) || pcFont16;
 function fontLabel() {
-  const name8 = saved('monopoly.font', 2048) ? 'user-supplied 8x8 font' : pcFont ? 'PC BIOS 8x8 font (pcfont.bin)' : 'built-in';
+  const name8 = userFont('monopoly.font', 2048) ? 'user-supplied 8x8 font' : pcFont ? 'PC BIOS 8x8 font (pcfont.bin)' : 'built-in';
   const name = display() === 'vga'
-    ? (saved('monopoly.font16', 4096) ? 'user-supplied 8x16 font' : pcFont16 ? 'PC BIOS 8x16 font (pcfont16.bin)' : name8 + ', rows doubled')
+    ? (userFont('monopoly.font16', 4096) ? 'user-supplied 8x16 font' : pcFont16 ? 'PC BIOS 8x16 font (pcfont16.bin)' : name8 + ', rows doubled')
     : name8;
   status.textContent = 'Font: ' + name;
 }

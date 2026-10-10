@@ -2,6 +2,7 @@
 import { Runtime, BrowserFS, Speaker, biosKey } from './runtime.js';
 import { BUILTIN_FONT } from './font.js';
 import { runPrograms } from './shell.js';
+import { createKeyboard } from './touchkbd.js';
 
 const canvas = document.getElementById('screen');
 const overlay = document.getElementById('overlay');
@@ -12,15 +13,44 @@ const displaySel = document.getElementById('display');
 let R = null, started = false;
 const speaker = new Speaker();
 
+const kbd = document.getElementById('kbd');
+const kbdToggle = document.getElementById('kbdtoggle');
+
 // The screen is shown at a monitor's 4:3 aspect (VGA text is 720x400, graphics 640x400 pixels);
 // the height is a multiple of 400 lines when it fits, so scan lines stay even.
+// With the on-screen keyboard in landscape, the screen and keyboard sit side by side.
+const main = document.querySelector('main'), bar = document.getElementById('bar');
 function fit() {
-  const ui = document.getElementById('bar').offsetHeight + 16;
-  const maxH = Math.min((window.innerWidth - 32) * 3 / 4, window.innerHeight - ui);
+  const vw = Math.min(window.innerWidth, document.documentElement.clientWidth), vh = window.innerHeight;
+  const side = !kbd.hidden && vw > vh;
+  main.classList.toggle('side', side);
+  kbd.style.removeProperty('--keyh');
+  const maxH = side ? Math.min(vh - 16, (vw - 48) * 0.5 * 3 / 4)
+    : Math.min((vw - 32) * 3 / 4, vh - (bar.offsetHeight + kbd.offsetHeight + 16));
   const h = maxH >= 400 ? Math.floor(maxH / 400) * 400 : Math.max(100, maxH);
   canvas.style.height = h + 'px'; canvas.style.width = Math.round(h * 4 / 3) + 'px';
+  if (side) {     // keys fill the height left beside the screen
+    const keyH = (vh - 16 - bar.offsetHeight - 8 - 5 * 4) / 6;
+    kbd.style.setProperty('--keyh', Math.max(24, Math.min(56, Math.floor(keyH))) + 'px');
+  }
 }
-window.addEventListener('resize', fit); fit();
+window.addEventListener('resize', fit);
+
+// On-screen keyboard: offered on touch screens, shown by default when touch is the main input.
+createKeyboard(kbd, (k) => { if (!started) { start(); return; } R.pushKey(k[0], k[1]); });
+if (navigator.maxTouchPoints > 0 || matchMedia('(any-pointer: coarse)').matches) {
+  kbdToggle.hidden = false;
+  let show = matchMedia('(pointer: coarse)').matches;
+  try { const s = localStorage.getItem('monopoly.kbd'); if (s) show = s === '1'; } catch (e) { /* default */ }
+  kbd.hidden = !show;
+  overlay.firstElementChild.textContent = 'Tap or press a key to start';
+  kbdToggle.addEventListener('click', () => {
+    kbd.hidden = !kbd.hidden;
+    try { localStorage.setItem('monopoly.kbd', kbd.hidden ? '0' : '1'); } catch (e) { /* not persisted */ }
+    fit(); canvas.focus();
+  });
+}
+fit();
 
 function b64ToBytes(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
 function bytesToB64(u) { let s = ''; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }

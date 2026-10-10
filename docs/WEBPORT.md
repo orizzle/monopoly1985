@@ -65,6 +65,10 @@ Video memory and all game behaviour are the same in both; only the way text mode
 - `Read(Kbd)`: extended keys arrive as `#27` followed by the scan code.
 - **The `{$C+}` check after every character written:** a key typed while the screen is being drawn is read and thrown away; Ctrl-S pauses, Ctrl-C breaks. The original game behaves this way.
 - `ReadLn`: the runtime's own line editor.
+- **On-screen keyboard** (`web/touchkbd.js`), for touch screens:
+  - It is a US PC layout with Esc, F1, F2, Backspace, Shift, Caps Lock, Space and Enter. Every key goes through the same mapping as a physical key, so the program receives the same character and scan code.
+  - It is shown by default when touch is the main input, and the "Keyboard" button toggles it.
+  - In landscape, the screen and keyboard sit side by side.
 
 ### Other behaviour
 
@@ -141,4 +145,3 @@ The CPU-timed effects follow the 8088 model. DOSBox's fixed-cycle mode is a roug
 
 - **Fonts:** IBM's ROM fonts (8×8 and VGA 8×16) are not included (see the README for `extract_pcfont.sh`).
 - **Drawing speed:** on a 4.77 MHz PC the screen drew visibly slowly. The port draws instantly, as DOSBox does at full speed. Only the CPU-dependent *sound* loops are timed.
-- **Touch input:** none. Playing needs a keyboard.

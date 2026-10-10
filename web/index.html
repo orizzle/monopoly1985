@@ -12,10 +12,12 @@
     <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
     <div id="overlay"><span>Click or press a key to start</span></div>
   </div>
+  <div id="kbd" hidden></div>
   <div id="bar">
     <label>Display: <select id="display"><option value="vga">VGA</option><option value="cga">CGA</option></select></label>
     <label>Font file (8x8 or 8x16): <input type="file" id="fontfile"></label>
     <button id="fontreset" type="button">Default font</button>
+    <button id="kbdtoggle" type="button" hidden>Keyboard</button>
     <span id="status"></span>
   </div>
 </main>

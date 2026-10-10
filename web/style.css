@@ -3,8 +3,24 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
 main { display: flex; flex-direction: column; align-items: center; padding: 8px 16px; box-sizing: border-box; }
 #frame { position: relative; line-height: 0; }
-#screen { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; outline: none; }
+#screen { display: block; width: 0; height: 0; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; outline: none; }
 #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   background: rgba(0, 0, 0, .75); color: #fff; font-size: 18px; line-height: 1.4; cursor: pointer; }
 #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; padding-top: 8px; color: var(--muted); font-size: 13px; }
 #bar input, #bar button { font: inherit; color: var(--fg); background: #111; border: 1px solid #333; }
+#kbd { width: 100%; max-width: 900px; padding-top: 8px; display: flex; flex-direction: column; gap: 4px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+#kbd[hidden] { display: none; }
+.krow { display: flex; gap: 4px; }
+.kgap { flex: 1 1 0; }
+.key { flex: 1 1 0; min-width: 0; height: var(--keyh, 44px); padding: 0 2px; font: 15px/1 system-ui, sans-serif; color: var(--fg);
+  background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 5px; white-space: nowrap; overflow: hidden;
+  touch-action: manipulation; cursor: pointer; }
+.key:active { background: #444; color: #fff; }
+.key.on { background: #2a4a2a; border-color: #5a8a5a; color: #fff; }
+@media (max-width: 480px) { #kbd { --keyh: 40px; } .key { font-size: 13px; } .krow, #kbd { gap: 3px; } }
+main.side { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr;
+  grid-template-areas: "screen kbd" "screen bar"; column-gap: 16px; align-items: start; }
+main.side #frame { grid-area: screen; }
+main.side #kbd { grid-area: kbd; padding-top: 0; }
+main.side #bar { grid-area: bar; }

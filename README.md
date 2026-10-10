@@ -22,7 +22,7 @@ The repository holds three things built from the game:
 
     cd web && python3 -m http.server 8000      # then open http://localhost:8000/
 
-Click the screen to start; sound needs a user action in the browser. During the dice roll, F1 toggles sound and F2 saves the game; on the "Who are the players?" screen, F2 loads a saved game. Saved games are kept in the browser's localStorage.
+Click the screen to start; sound needs a user action in the browser. During the dice roll, F1 toggles sound and F2 saves the game; on the "Who are the players?" screen, F2 loads a saved game. Saved games are kept in the browser's localStorage. On phones and tablets an on-screen PC keyboard appears below the screen (the "Keyboard" button shows or hides it).
 
 **Display and font.** The port can show the screen as a VGA (the default) or a CGA would.
 - **VGA:** text screens use an 8×16 font in 9×16 character cells at 720×400; the board stays in 320×200 CGA graphics, as on a VGA PC.

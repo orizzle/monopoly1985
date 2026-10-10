@@ -88,6 +88,8 @@ So mortgage interest on a $150 property comes to $7, as on the original.
 
 ## Sound
 
+> **Status:** all sounds are good except the **go-to-jail siren** and the **token movement** (the sound of each square the token steps over), which do not yet sound right. An attempt to fix them by restarting the wave on every `Sound` call, as the PC's timer does, distorted the corner sweep and added tones to the dice rattle, so it was withdrawn.
+
 - **Pitch:** the PC speaker is a Web Audio square wave. `Sound(Hz)` uses the same timer divisor as the runtime (`1234DDh / Hz`, frequencies of 18 Hz and below ignored), so pitches are exact.
 - **`Delay`:** a real millisecond, as it was on the PC, where the runtime calibrated it at start-up. Browser timers are coarse, so the port keeps a virtual clock and schedules every speaker change on the audio clock at its exact virtual time.
 

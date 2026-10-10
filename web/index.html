@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monopoly 1985</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <div id="frame">
+    <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
+    <div id="overlay"><span>Click or press a key to start</span></div>
+  </div>
+  <div id="bar">
+    <label>PC 8x8 font (2048 bytes): <input type="file" id="fontfile"></label>
+    <button id="fontreset" type="button">Default font</button>
+    <span id="status"></span>
+  </div>
+</main>
+<script type="module" src="main.js"></script>
+</body>
+</html>

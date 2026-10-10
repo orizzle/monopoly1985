@@ -1,0 +1,10 @@
+:root { --bg: #000; --fg: #aaa; --muted: #777; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #000; --fg: #aaa; } }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+main { display: flex; flex-direction: column; align-items: center; padding: 8px 16px; box-sizing: border-box; }
+#frame { position: relative; line-height: 0; }
+#screen { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; outline: none; }
+#overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .75); color: #fff; font-size: 18px; line-height: 1.4; cursor: pointer; }
+#bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; padding-top: 8px; color: var(--muted); font-size: 13px; }
+#bar input, #bar button { font: inherit; color: var(--fg); background: #111; border: 1px solid #333; }

@@ -1,0 +1,32 @@
+"""TP 3.02 runtime routine names (addresses in CS:0100 space), learned from probe compiles."""
+N302 = {
+ 0x0a99:'RT_Init', 0x0c7d:'RT_InitData', 0x0c40:'RT_Halt',
+ 0x2522:'WrBeginOutput', 0x2534:'WrBeginFile', 0x2927:'WrStrLit', 0x293f:'WrLn', 0x2883:'WrInt',
+ 0x2867:'WrChar', 0x28f0:'WrStr', 0x28d0:'WrBool', 0x28b8:'WrReal', 0x0fd3:'IOCheck', 0x0fcc:'IOResult',
+ 0x2505:'RdBeginFile', 0x2551:'RdlnBeginInput', 0x2555:'RdBeginInput', 0x272c:'RdChar', 0x277d:'RdStr',
+ 0x2740:'RdInt', 0x27d1:'RdLnEnd',
+ 0x0d5b:'GotoXY', 0x01ef:'ClrScr', 0x0271:'ClrEol', 0x036c:'TextColor', 0x0380:'TextBackground',
+ 0x034f:'Window', 0x01c0:'Delay', 0x054d:'Sound', 0x0574:'NoSound', 0x108b:'RandomInt', 0x1a97:'RandomReal',
+ 0x0ec5:'Randomize', 0x1182:'StrLoad', 0x119b:'StrLit', 0x11b1:'StrStore', 0x11f3:'StrValParam',
+ 0x12f8:'Copy', 0x12b3:'Concat', 0x1341:'Length', 0x134e:'Pos', 0x0dc3:'StrInt', 0x0ddc:'StrReal',
+ 0x0e38:'ValInt', 0x0e3c:'ValReal', 0x1392:'Insert', 0x13ea:'Delete', 0x0330:'UpCase', 0x1446:'CharToStr',
+ 0x1230:'StrEq', 0x123c:'StrNe', 0x126c:'StrLt',
+ 0x298e:'AssignF', 0x2b46:'ResetUntyped', 0x2b4d:'RewriteUntyped', 0x29d8:'CloseF', 0x2b54:'BlockRead',
+ 0x2b5c:'BlockWrite', 0x2cf2:'Chain', 0x2ced:'Execute', 0x0d55:'KeyPressed',
+ 0x14bf:'SetBegin', 0x14d1:'SetAddElem', 0x14d8:'SetAddRange', 0x15a4:'SetIn', 0x148f:'SetLoad', 0x14f7:'SetStore',
+ 0x1af2:'IntToReal', 0x1936:'RealLoad', 0x1956:'RealStore', 0x1abd:'Trunc', 0x1ab9:'Round', 0x1993:'RealMul',
+ 0x19a2:'RealDiv', 0x1969:'RealAdd', 0x1a39:'RealGt', 0x1b10:'Sqrt', 0x1b83:'Sin', 0x1a7d:'Int', 0x1a8a:'Frac',
+ 0x0258:'LowVideo', 0x0261:'HighVideo', 0x0ef5:'FillChar', 0x0efe:'Move', 0x05a8:'New', 0x0677:'Dispose',
+ 0x1084:'Abs', 0x0f18:'IntrPre', 0x0f40:'IntrPost', 0x0d69:'ParamStr', 0x0d86:'ParamCount',
+ 0x229d:'AssignText', 0x22f2:'ResetText', 0x22f6:'RewriteText', 0x22fa:'AppendText', 0x241d:'CloseText',
+ 0x2958:'EofText', 0x294e:'EolnText', 0x2a61:'Seek', 0x2ad1:'FileSize', 0x2ab1:'FilePos', 0x2a9a:'EofTyped',
+ 0x2c08:'Erase', 0x2c25:'Rename', 0x29ea:'TypedFileBegin', 0x2a07:'ReadTyped', 0x2a0f:'WriteTyped',
+ 0x2993:'ResetTyped', 0x0f82:'StackCheck', 0x07d2:'MaxAvail', 0x0795:'MemAvail', 0x07d8:'Mark', 0x07ea:'Release',
+ 0x057b:'GetMem', 0x0672:'FreeMem', 0x028e:'CrtInit', 0x0308:'CrtExit', 0x024d:'InsLine', 0x0223:'DelLine',
+ 0x0333:'WhereX', 0x0341:'WhereY', 0x1945:'RealConst', 0x1cc6:'Exp', 0x1c16:'Ln', 0x1d6f:'ArcTan', 0x1b6e:'Cos',
+ 0x0295:'TextMode',
+ 0x1984:'RealSub', 0x19d1:'RealEq', 0x19eb:'RealNe', 0x1a53:'RealLt', 0x1a1f:'RealLe', 0x1a05:'RealGe',
+ 0x1afb:'IntToRealLeft', 0x1433:'StrToChar', 0x2997:'RewriteTyped', 0x0ed3:'RecordCopy', 0x19ba:'RealNeg',
+}
+INLINE302 = {0x2927, 0x119b}   # followed by inline length-prefixed string
+INLINE_FIXED302 = {0x1945: 6}   # followed by an inline 6-byte real constant

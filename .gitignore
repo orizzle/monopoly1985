@@ -1,0 +1,6 @@
+verify/tp302/
+verify/emu2/
+verify/an/
+verify/.rtruns.pkl
+__pycache__/
+web/pcfont.bin

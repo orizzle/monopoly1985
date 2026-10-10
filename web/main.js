@@ -38,6 +38,9 @@ window.addEventListener('resize', fit);
 
 // On-screen keyboard: offered on touch screens, shown by default when touch is the main input.
 createKeyboard(kbd, (k) => { if (!started) { start(); return; } R.pushKey(k[0], k[1]); });
+// Keys act on pointerdown, but a touch only counts as a user gesture (needed to start audio) when the
+// finger lifts, so the speaker is (re)started then.
+for (const ev of ['pointerup', 'touchend']) kbd.addEventListener(ev, () => { if (started) speaker.resume(); });
 if (navigator.maxTouchPoints > 0 || matchMedia('(any-pointer: coarse)').matches) {
   kbdToggle.hidden = false;
   let show = matchMedia('(pointer: coarse)').matches;

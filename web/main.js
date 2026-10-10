@@ -39,10 +39,10 @@ const fontsReady = Promise.all([get('pcfont.bin', 2048), get('pcfont16.bin', 409
 const font8 = () => saved('monopoly.font', 2048) || pcFont || BUILTIN_FONT;
 const font16 = () => saved('monopoly.font16', 4096) || pcFont16;
 function fontLabel() {
-  const d = display();
-  const name = d === 'vga'
-    ? (saved('monopoly.font16', 4096) ? 'user-supplied 8x16 font' : pcFont16 ? 'PC BIOS 8x16 font (pcfont16.bin)' : 'built-in')
-    : (saved('monopoly.font', 2048) ? 'user-supplied 8x8 font' : pcFont ? 'PC BIOS 8x8 font (pcfont.bin)' : 'built-in');
+  const name8 = saved('monopoly.font', 2048) ? 'user-supplied 8x8 font' : pcFont ? 'PC BIOS 8x8 font (pcfont.bin)' : 'built-in';
+  const name = display() === 'vga'
+    ? (saved('monopoly.font16', 4096) ? 'user-supplied 8x16 font' : pcFont16 ? 'PC BIOS 8x16 font (pcfont16.bin)' : name8 + ', rows doubled')
+    : name8;
   status.textContent = 'Font: ' + name;
 }
 function display() { try { return localStorage.getItem('monopoly.display') === 'cga' ? 'cga' : 'vga'; } catch (e) { return 'vga'; } }

@@ -19,8 +19,17 @@ main { display: flex; flex-direction: column; align-items: center; padding: 8px 
 .key:active { background: #444; color: #fff; }
 .key.on { background: #2a4a2a; border-color: #5a8a5a; color: #fff; }
 @media (max-width: 480px) { #kbd { --keyh: 40px; } .key { font-size: 13px; } .krow, #kbd { gap: 3px; } }
-main.side { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr;
-  grid-template-areas: "screen kbd" "screen bar"; column-gap: 16px; align-items: start; }
+main.side { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr;
+  grid-template-areas: "screen kbd" "screen online" "screen bar"; column-gap: 16px; align-items: start; }
 main.side #frame { grid-area: screen; }
 main.side #kbd { grid-area: kbd; padding-top: 0; }
 main.side #bar { grid-area: bar; }
+main.side #online { grid-area: online; }
+#online { width: 100%; max-width: 900px; padding-top: 8px; font-size: 13px; color: var(--muted); }
+#online[hidden] { display: none; }
+#olline { color: var(--fg); min-height: 1.4em; }
+#chatlog { max-height: 5.6em; overflow-y: auto; margin: 4px 0; }
+#chatlog b { color: var(--fg); font-weight: 600; }
+#chatform { display: flex; gap: 6px; }
+#chatin { flex: 1; min-width: 0; }
+#online input, #online button { font: inherit; color: var(--fg); background: #111; border: 1px solid #333; }

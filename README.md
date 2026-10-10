@@ -24,6 +24,13 @@ The repository holds three things built from the game:
 
 Click the screen to start; sound needs a user action in the browser. During the dice roll, F1 toggles sound and F2 saves the game; on the "Who are the players?" screen, F2 loads a saved game. Saved games are kept in the browser's localStorage. On phones and tablets an on-screen PC keyboard appears below the screen (the "Keyboard" button shows or hides it).
 
+**Online play.** After the click, a menu in the game's own style offers **L** (play on this computer, the original game), **C** (create an online game) or **J** (join one).
+- **Creating a game:** the creator, the host, gets a four-letter game code to give to the others, up to four players in all, and starts the game when everyone has joined. **S** starts a new game and **F2** starts the original "load a saved game" screen.
+- **Taking turns:** every player sees the game exactly as in the original. Only the player whose turn it is can type or tap; anyone else's keys are ignored.
+- **Talking:** a chat line under the screen is there for what the game expects players to say aloud, such as auction bids and trade prices.
+- **Reloads and absences:** a player who reloads rejoins with the same code and name. If a player is gone for 20 seconds on their turn, the host can play for them.
+- **Requirements:** online play needs `web/api.php` on a PHP 8 server (see `docs/WEBPORT.md`).
+
 **Display and font.** The port can show the screen as a VGA (the default) or a CGA would.
 - **VGA:** text screens use an 8×16 font in 9×16 character cells at 720×400; the board stays in 320×200 CGA graphics, as on a VGA PC.
 - **CGA:** everything uses the 8×8 font, as on the game's original 1985 target.

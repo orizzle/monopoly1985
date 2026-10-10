@@ -9,6 +9,7 @@ export async function runPrograms(R, loadModule, first = 'MONOPOLY.COM') {
   let prog = first;
   for (;;) {
     const mod = await loadModule(PROGRAMS[prog]);
+    R.program = PROGRAMS[prog];
     R.programStart();
     try {
       await mod.main(R);

@@ -13,6 +13,11 @@
     <div id="overlay"><span>Click or press a key to start</span></div>
   </div>
   <div id="kbd" hidden></div>
+  <section id="online" hidden>
+    <div id="olline"><span id="olstatus"></span> <button id="takeover" type="button" hidden></button></div>
+    <div id="chatlog"></div>
+    <form id="chatform"><input id="chatin" maxlength="200" autocomplete="off" placeholder="Message to the other players"><button type="submit">Send</button></form>
+  </section>
   <div id="bar">
     <label>Display: <select id="display"><option value="vga">VGA</option><option value="cga">CGA</option></select></label>
     <label>Font file (8x8 or 8x16): <input type="file" id="fontfile"></label>

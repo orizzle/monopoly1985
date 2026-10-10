@@ -63,6 +63,10 @@ export class Runtime {
     this.cflag = 1;            // runtime: Ctrl-C / Ctrl-S checking during console I/O ({$C+})
     this.pausePending = false;
     this.keyWaiters = [];
+    // Online play: when set, keys reach the program only through keyGate.poll() at its keyboard polls
+    // (KeyPressed, Read(Kbd)/ReadLn waits), so every player's copy receives them at the same point.
+    this.keyGate = null;
+    this.ff = false;           // fast-forward (online catch-up): Delay and CPU time are not waited for, no sound
     // --- console line input (runtime line editor + Input buffer) ---
     this.bufLen = 126;
     this.lineBuf = new Uint8Array(128);   // persists between lines (Ctrl-D / Ctrl-R recall)
@@ -425,13 +429,17 @@ export class Runtime {
   }
   async _conIn() {
     await this._handlePause();
-    await this._waitKey();
+    await this._waitKeyGated();
     return this._conInSync();
+  }
+  async _waitKeyGated() {
+    if (!this.keyGate) { await this._waitKey(); return; }
+    while (this.pendingScan === 0 && !this.keys.length) await this.keyGate.poll(this, true);
   }
   async _handlePause() {
     if (!this.pausePending) return;
     this.pausePending = false;
-    await this._waitKey();
+    await this._waitKeyGated();
     this._conInSync();
   }
   async _yield() {
@@ -440,7 +448,7 @@ export class Runtime {
   async readKbd() { return this._conIn(); }
   async keyPressed() {
     await this._handlePause();
-    await this._yield();
+    if (this.keyGate) await this.keyGate.poll(this, false); else await this._yield();
     return this._kbHit();
   }
 
@@ -535,6 +543,7 @@ export class Runtime {
     ms &= 0xFFFF;
     await this._handlePause();
     if (this.headless) { this.vnow += ms; await this._yield(); return; }
+    if (this.ff) { this.vnow += ms; await this._ffYield(); if (this.keyGate) await this.keyGate.poll(this, false, true); return; }
     const now = this._now();
     if (this.vnow < now - 50 || this.vnow > now + 60000) this.vnow = now;
     this.vnow += ms;
@@ -545,6 +554,19 @@ export class Runtime {
     const wait = this.vnow - this._now();
     if (wait >= 8) { await new Promise((r) => setTimeout(r, wait)); this.lastYield = this._now(); }
     else if (this._now() - (this.lastYield || 0) > 16) { await this._yield(); this.lastYield = this._now(); }
+    // keys typed during a Delay reach the BIOS buffer here, as they do in a single-player game
+    if (this.keyGate) await this.keyGate.poll(this, false, true);
+  }
+  // fast-forward: yield to the browser only every few ms of real time
+  async _ffYield() {
+    const now = this._now();
+    if (now - (this.lastYield || 0) > 25) { await new Promise((r) => setTimeout(r, 0)); this.lastYield = this._now(); }
+  }
+  setFastForward(on) {
+    on = !!on; if (on === this.ff) return;
+    this.ff = on;
+    if (!on) this.vnow = this._now();
+    if (this.audio) this.audio.set(on ? false : this.speakerOn, PIT_HZ / (this.divisor || 65536));
   }
   sound(hz) {
     hz &= 0xFFFF;
@@ -554,13 +576,13 @@ export class Runtime {
   noSound() { this._speaker(false); }
   _speaker(on, div) {
     this.speakerOn = on; if (on) this.divisor = div;
-    if (this.audio) this.audio.set(on, on ? PIT_HZ / (div || 65536) : 0, Math.max(this.vnow, this._now()));
+    if (this.audio && !this.ff) this.audio.set(on, on ? PIT_HZ / (div || 65536) : 0, Math.max(this.vnow, this._now()));
   }
   // CPU time of the original program on a 4.77 MHz IBM PC (8088), measured for the loops whose
   // sound depends on CPU speed (see tools/measure_sound_loops.py): advances the virtual clock
   // without blocking; speaker changes are scheduled on that clock
   cpu(clocks) {
-    if (this.headless) { this.vnow += clocks / CPU_KHZ; return; }
+    if (this.headless || this.ff) { this.vnow += clocks / CPU_KHZ; return; }
     const now = this._now();
     if (this.vnow < now) this.vnow = now;
     this.vnow += clocks / CPU_KHZ;
@@ -568,8 +590,11 @@ export class Runtime {
   // let real time catch up with the virtual clock (end of a CPU-timed loop)
   async catchUp() {
     if (this.headless) return;
-    const wait = this.vnow - this._now();
-    if (wait > 1) await new Promise((r) => setTimeout(r, wait));
+    if (!this.ff) {
+      const wait = this.vnow - this._now();
+      if (wait > 1) await new Promise((r) => setTimeout(r, wait));
+    } else await this._ffYield();
+    if (this.keyGate) await this.keyGate.poll(this, false, true);
   }
   random(n) {
     this.seed = (this.seed * 129 + 0x361962E9) % 4294967296;
@@ -763,7 +788,7 @@ export class Runtime {
     this.img = this.offCtx.createImageData(640, 200);
     this.img32 = new Uint32Array(this.img.data.buffer);
     this.rgba = CGA_RGB.map((c) => (0xFF000000 | ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >> 16) & 0xFF)) >>> 0);
-    const frame = () => { this.render(); requestAnimationFrame(frame); };
+    const frame = () => { if (this.detached) return; this.render(); requestAnimationFrame(frame); };
     requestAnimationFrame(frame);
   }
   // Fill a 640x200 RGBA32 buffer from VRAM; returns it (used by the canvas and by tests).
@@ -861,6 +886,7 @@ export class Runtime {
     else { this.font16 = font16From8(this.font); this._font16Derived = true; }
   }
   setDisplay(d) { this.display = d === 'cga' ? 'cga' : 'vga'; }
+  detach() { this.detached = true; }       // stop drawing to the canvas (another runtime takes it over)
 }
 
 // ========================================================================= file systems

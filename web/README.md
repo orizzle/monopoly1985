@@ -14,7 +14,7 @@ ES modules do not load from `file://`, so serve the folder:
 
     cd web && python3 -m http.server 8000      # then open http://localhost:8000/
 
-Click the screen, or press a key, to start; browsers only allow sound after a user action.
+Click the screen, or press a key, to start; browsers only allow sound after a user action. A menu then offers playing on this computer or an online game. Online games need `api.php` to run on a PHP server; with only a static server, play on this computer. For local testing of online games, use `test/online/devserver.py`.
 
 The keyboard works as on the PC. During the dice roll, F1 toggles sound and F2 saves the game. On the "Who are the players?" screen, F2 loads a saved game.
 
@@ -31,7 +31,7 @@ Saved games are stored in the browser's localStorage under the file name you typ
 - the save-file format;
 - error messages.
 
-**Not identical: the text font.** The PC's character ROM font is IBM's and is not included. The built-in font is an original 8×8 design covering every character the game can display. To get the original look, load a 2048-byte 8×8 PC font file of your own (256 glyphs × 8 rows, top row first, leftmost pixel = most significant bit) with the control under the screen. The browser remembers it. Glyph positions and colours are identical either way.
+**Not identical: the text font.** The PC's fonts are IBM's and are not included. The built-in font is an original 8×8 design covering every character the game can display; the VGA display doubles its rows. To get the original look, run `tools/extract_pcfont.sh` (writes `pcfont.bin` and `pcfont16.bin` from your own DOSBox BIOS), or load a font file with the control under the screen: 2048 bytes for 8×8 or 4096 bytes for 8×16 (256 glyphs, top row first, leftmost pixel = most significant bit). Glyph positions and colours are identical either way.
 
 ## Verification (`test/`)
 

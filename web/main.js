@@ -1,8 +1,10 @@
-// Browser bootstrap: canvas, keyboard, PC speaker, files, font selection.
+// Browser bootstrap: canvas, keyboard, PC speaker, files, font selection, online games.
 import { Runtime, BrowserFS, Speaker, biosKey } from './runtime.js';
 import { BUILTIN_FONT } from './font.js';
 import { runPrograms } from './shell.js';
 import { createKeyboard } from './touchkbd.js';
+import { lobby } from './lobby.js';
+import { Api, Gate, OnlineFS } from './online.js';
 
 const canvas = document.getElementById('screen');
 const overlay = document.getElementById('overlay');
@@ -11,7 +13,11 @@ const fontInput = document.getElementById('fontfile');
 const fontReset = document.getElementById('fontreset');
 const displaySel = document.getElementById('display');
 let R = null, started = false;
+let sink = null;                 // where typed keys go: the menus, the game, or the online game
+let online = null;
+window.monopolyState = () => ({ R, online });     // for tests
 const speaker = new Speaker();
+const api = new Api('api.php');
 
 const kbd = document.getElementById('kbd');
 const kbdToggle = document.getElementById('kbdtoggle');
@@ -20,13 +26,14 @@ const kbdToggle = document.getElementById('kbdtoggle');
 // the height is a multiple of 400 lines when it fits, so scan lines stay even.
 // With the on-screen keyboard in landscape, the screen and keyboard sit side by side.
 const main = document.querySelector('main'), bar = document.getElementById('bar');
+const onlineEl = document.getElementById('online');
 function fit() {
   const vw = Math.min(window.innerWidth, document.documentElement.clientWidth), vh = window.innerHeight;
   const side = !kbd.hidden && vw > vh;
   main.classList.toggle('side', side);
   kbd.style.removeProperty('--keyh');
   const maxH = side ? Math.min(vh - 16, (vw - 48) * 0.5 * 3 / 4)
-    : Math.min((vw - 32) * 3 / 4, vh - (bar.offsetHeight + kbd.offsetHeight + 16));
+    : Math.min((vw - 32) * 3 / 4, vh - (bar.offsetHeight + kbd.offsetHeight + onlineEl.offsetHeight + 16));
   const h = maxH >= 400 ? Math.floor(maxH / 400) * 400 : Math.max(100, maxH);
   canvas.style.height = h + 'px'; canvas.style.width = Math.round(h * 4 / 3) + 'px';
   if (side) {     // keys fill the height left beside the screen
@@ -37,7 +44,7 @@ function fit() {
 window.addEventListener('resize', fit);
 
 // On-screen keyboard: offered on touch screens, shown by default when touch is the main input.
-createKeyboard(kbd, (k) => { if (!started) { start(); return; } R.pushKey(k[0], k[1]); });
+createKeyboard(kbd, (k) => { if (!started) { start(); return; } if (sink) sink(k); });
 // Keys act on pointerdown, but a touch only counts as a user gesture (needed to start audio) when the
 // finger lifts, so the speaker is (re)started then.
 for (const ev of ['pointerup', 'touchend']) kbd.addEventListener(ev, () => { if (started) speaker.resume(); });
@@ -112,11 +119,19 @@ fontReset.addEventListener('click', () => {
 
 window.addEventListener('keydown', (e) => {
   if (!started) { if (e.key !== 'Tab') { e.preventDefault(); start(); } return; }
-  if (document.activeElement === fontInput || document.activeElement === displaySel) return;
+  if (e.target.closest && e.target.closest('input, select, textarea, button')) return;
   const k = biosKey(e);
-  if (k) { e.preventDefault(); R.pushKey(k[0], k[1]); }
+  if (k) { e.preventDefault(); if (sink) sink(k); }
 });
 overlay.addEventListener('click', () => start());
+
+// After a reload caused by an online game getting out of step, rejoin it.
+let resume = null;
+try { resume = JSON.parse(sessionStorage.getItem('monopoly.resume') || 'null'); sessionStorage.removeItem('monopoly.resume'); } catch (e) { /* none */ }
+if (resume) overlay.firstElementChild.textContent = 'Click or press a key to rejoin online game ' + resume.code;
+
+const newRuntime = (vfs) => new Runtime({ canvas, audio: speaker, vfs, font: font8(), font16: font16(), display: display() });
+const loadModule = (name) => import('./' + name + '.js');
 
 async function start() {
   if (started) { speaker.resume(); return; }
@@ -125,10 +140,87 @@ async function start() {
   speaker.resume();
   const gra = new Uint8Array(await (await fetch('MONOGRAF.GRA')).arrayBuffer());
   const marker = new Uint8Array([0x1A]);
-  const vfs = new BrowserFS({ 'MONOGRAF.GRA': gra, 'MONOCODE.CHN': marker, 'MONOCODE.000': marker });
+  const builtin = { 'MONOGRAF.GRA': gra, 'MONOCODE.CHN': marker, 'MONOCODE.000': marker };
   await fontsReady;
-  R = new Runtime({ canvas, audio: speaker, vfs, font: font8(), font16: font16(), display: display() });
+  // the menus run on a runtime of their own; the game then starts on a fresh one, as from DOS
+  const menu = newRuntime(new BrowserFS({}));
+  R = menu; sink = (k) => menu.pushKey(k[0], k[1]);
   canvas.focus();
-  const res = await runPrograms(R, (name) => import('./' + name + '.js'));
+  const choice = await lobby(menu, api, resume);
+  menu.detach(); menu.noSound();
+  if (choice.mode === 'online') { await playOnline(choice, builtin); return; }
+  R = newRuntime(new BrowserFS(builtin));
+  sink = (k) => R.pushKey(k[0], k[1]);
+  const res = await runPrograms(R, loadModule);
   status.textContent = res.kind === 'error' ? 'Program aborted.' : 'Program ended. Reload the page to play again.';
+}
+
+// ---------------------------------------------------------------------------------------- online
+const olStatus = document.getElementById('olstatus');
+const takeover = document.getElementById('takeover');
+const chatLog = document.getElementById('chatlog');
+const chatForm = document.getElementById('chatform');
+const chatIn = document.getElementById('chatin');
+
+async function playOnline(choice, builtin) {
+  const s = choice.session;
+  R = newRuntime(new OnlineFS(builtin, s.startEv.files, new BrowserFS({})));
+  const gate = new Gate(s);
+  if (resume && resume.code === s.code && resume.p !== undefined) gate.trustedUpTo = resume.p;
+  R.keyGate = gate; online = { s, gate };
+  onlineEl.hidden = false; fit();
+  let note = '', noteUntil = 0;
+  const nameOf = (i) => (s.seats[i] ? s.seats[i].name : '?');
+  sink = (k) => {
+    if (gate.localKey(k)) return;
+    note = 'it is ' + nameOf(gate.owner) + '\'s turn.'; noteUntil = performance.now() + 2000; showStatus();
+  };
+  // A new game: the host's copy types the players' names into the game's own name entry.
+  if (s.me === 0 && !choice.load && s.H < 0) {
+    // (only when the program asks for a key, so the drawing of the screen does not swallow them)
+    for (const n of s.startEv.seats) { for (const ch of n) gate.local.push([ch.charCodeAt(0), 0, true]); gate.local.push([13, 0x1C, true]); }
+    if (s.startEv.seats.length < 4) gate.local.push([13, 0x1C, true]);   // the game stops by itself at four
+  }
+  let pending = false;
+  function showStatus() {
+    if (pending) return; pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      let t = 'Online game ' + s.code + ': ';
+      const by = s.seats[gate.by];
+      if (gate.behind > 60) t += 'catching up…';
+      else if (performance.now() < noteUntil) t += note;
+      else if (gate.by === s.me) t += gate.owner === s.me ? 'your turn.' : 'you are playing for ' + nameOf(gate.owner) + '.';
+      else t += nameOf(gate.owner) + '\'s turn' + (by && !by.online ? ' (offline)' : '') + '.';
+      olStatus.textContent = t;
+      const canTake = s.me === 0 && gate.by !== 0 && by && !by.online && by.away >= 20;
+      takeover.hidden = !canTake;
+      if (canTake) takeover.textContent = 'Play for ' + nameOf(gate.owner);
+    });
+  }
+  s.onChange = showStatus; gate.onStatus = showStatus;
+  takeover.onclick = () => { api.call('control', { code: s.code, token: s.token, seat: gate.owner }); canvas.focus(); };
+  s.onChat = (ev) => {
+    const d = document.createElement('div');
+    const b = document.createElement('b'); b.textContent = ev.name + ': ';
+    d.append(b, document.createTextNode(ev.text));
+    chatLog.append(d); chatLog.scrollTop = chatLog.scrollHeight;
+  };
+  chatForm.onsubmit = (e) => { e.preventDefault(); const t = chatIn.value.trim(); if (t) s.say(t); chatIn.value = ''; };
+  // p: the poll where the difference showed; the rebuilt copy trusts the log up to there
+  const rejoin = (p) => {
+    try { sessionStorage.setItem('monopoly.resume', JSON.stringify({ code: s.code, name: s.name, p })); } catch (e) { /* none */ }
+    location.reload();
+  };
+  gate.onDesync = (p) => {
+    olStatus.textContent = 'This copy of the game got out of step; rejoining…';
+    setTimeout(() => rejoin(Math.max(p, s.H)), 1500);
+  };
+  s.onFatal = (e) => {
+    if (e === 'desync') gate.onDesync(gate.p);
+    else olStatus.textContent = 'The online game has ended.';
+  };
+  showStatus();
+  const res = await runPrograms(R, loadModule);
+  olStatus.textContent = res.kind === 'error' ? 'Program aborted.' : 'Program ended. Reload the page to play again.';
 }

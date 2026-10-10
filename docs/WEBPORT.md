@@ -121,6 +121,43 @@ The game's effects, copied into `web/test/sound/SNDPROBE.PAS`, were recorded on 
 
 The CPU-timed effects follow the 8088 model. DOSBox's fixed-cycle mode is a rough speed approximation, which accounts for the differences there.
 
+## Online play
+
+Every player's browser runs its own copy of the game, compiled from the same source. A small PHP backend (`web/api.php`) does not run the game and sends no pictures. It keeps a shared log of keys, and the copies stay identical because the program is deterministic.
+
+### Keys at the same point in every copy
+
+- **Poll points:** the runtime numbers every point where the program can receive a key:
+  - every `KeyPressed`;
+  - every wait for a key (`Read(Kbd)`, `ReadLn`, the Ctrl-S pause);
+  - the end of every `Delay` and CPU-timed loop. Those are where keys typed during the dice animation reach the keyboard buffer in a single-player game.
+- **Delivery:** with `Runtime.keyGate` set (`web/online.js`), keys reach the program only at those points.
+- **The log:** the player whose turn it is decides each point: a key, or no key. Each decision goes into the log. The other copies follow the log, and when they catch up with it they wait at the next point.
+- **Dice:** the dice come from `Random`, which advances on every poll while the dice shake. Because a key arrives at the same numbered poll in every copy, every copy rolls the same dice. Pressing a key two or three times is also the same everywhere. Extra keys pressed while the token moves are swallowed by the game's own check while drawing, exactly as in the single-player game.
+- **Checking:** each logged key carries an FNV hash of the game's data segment and random seed. A copy whose state differs notices at the next key and rebuilds itself from the log. A rebuilt copy is right by construction, so it trusts the log up to the point where it was rebuilt; the copy that was out of step is then the one that rebuilds.
+- **Catching up:** a copy far behind the log, such as one that just rejoined, runs without waiting for `Delay` and without sound until it has caught up.
+
+### Whose turn
+
+Ownership comes from the game's own data, which is the same in every copy:
+- **Setting up:** the host types while the players are entered or a saved game is loaded. For a new game, the host's copy types the players' names into the game's own name entry.
+- **During the game:** the player whose name is `Player[CurPlayer]` types. That covers everything on their turn, including business, auctions and paying.
+- **Everyone else:** keys and taps are ignored, and the status line says whose turn it is.
+- **Absent players:** if a player is offline for 20 seconds, the host may play for them ("Play for …"). Those keys are applied only once the backend has accepted them, and the player gets the seat back on rejoining.
+
+### Files
+
+The host's saved games are sent to everyone at the start, so loading a saved game works the same in every copy. Games saved during play are written by every copy, and each player keeps one in their own browser.
+
+### Backend (`web/api.php`)
+
+- **Requests:** POSTed JSON: `create`, `join`, `leave`, `start`, `control` and `sync`.
+- **`sync`:** sends the poster's decisions and chat, and returns new log entries, events and the players' status.
+- **Storage:** each game is a directory under `MONOPOLY_DATA` holding `meta.json`, an append-only `keys.log` and `events.log`.
+- **Locking and checks:** requests on a game are serialized with `flock`. The backend accepts decisions only in order, and only from the player entitled to make them.
+- **Expiry:** idle games are removed after 6 hours.
+- **The live site:** the file runs on its own PHP-FPM pool (`monopoly`, `MONOPOLY_DATA=/var/lib/monopoly-online`).
+
 ## Verification
 
 ### End-to-end screens
@@ -140,6 +177,8 @@ The CPU-timed effects follow the 8088 model. DOSBox's fixed-cycle mode is a roug
 | `web/test/dosbox_compare.py` | Individual runtime behaviours against the original runtime in DOSBox: text and windows, scrolling, graphics text, palettes, `GetPic`/`PutPic` at every alignment, the line editor, key swallowing, error messages |
 | `web/test/real48.test.mjs` | 6,260 real-arithmetic results recorded from the original runtime (`test/data/`) |
 | `web/test/unit.mjs` | Unit tests |
+| `web/test/online/online_sync.py` | Online games of 2 to 4 players in separate browsers, one on a phone with the on-screen keyboard. Every copy must agree at every recorded point (data, dice, seed, screen). Out-of-turn presses must be ignored. Runs against `api.php` through `devserver.py` or the live site (`MONOPOLY_URL`) |
+| `web/test/online/online_rejoin.py`, `online_repair.py` | Reload and rejoin, playing for an absent player and their return, and repair of a deliberately corrupted copy |
 
 ## Differences that remain
 
